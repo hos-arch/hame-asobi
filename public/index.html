@@ -177,12 +177,11 @@ button:focus-visible,input:focus-visible{outline:3px solid #e0b24a;outline-offse
       </div>
       <div class="row" data-only="pic">
         <h3>ピースの数</h3>
-        <div class="opts three">
+        <div class="opts">
           <button class="opt" data-set="n" data-v="2">2つ</button>
           <button class="opt" data-set="n" data-v="4">4つ</button>
-          <button class="opt" data-set="n" data-v="6">6つ</button>
         </div>
-        <p class="note">絵は、車・りんご・バナナ・さかな・はなの中から、順に出します。</p>
+        <p class="note">ピースは大きく、少なめです。ひとつの絵の細部から、全体が思い浮かぶようにします。絵は、車・りんご・バナナ・さかな・はなから、順に出します。</p>
       </div>
       <div class="row">
         <h3>ヒント</h3>
@@ -460,6 +459,7 @@ function shapePath(kind, cx, cy, s){
 // ---- 絵（すべて単純な図形で描く）----
 function gRR(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 function gCirc(g, x, y, r, col){ g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = col; g.fill(); }
+const PIC_BG = { car: '#dff1fb', apple: '#eef7e2', banana: '#fdf7dc', fish: '#dcf0f6', flower: '#fcf0f5' };
 const PIC_DRAW = {
   car(g){
     gRR(g, 8, 46, 84, 28, 8); g.fillStyle = '#e35d5d'; g.fill();
@@ -492,19 +492,16 @@ const PIC_DRAW = {
     gCirc(g, 50, 42, 12, '#f2c14e');
   }
 };
-// 絵は、ピースの数に合わせた格子（1ピース＝200px四方）で、1枚の絵にする
-function drawPic(nm, cols, rows){
-  const c = document.createElement('canvas'); c.width = cols * 200; c.height = rows * 200;
-  const g = c.getContext('2d'), s = Math.min(c.width, c.height) / 100, ox = (c.width - 100 * s) / 2, oy = (c.height - 100 * s) / 2;
-  g.fillStyle = '#fffaf0'; g.fillRect(0, 0, c.width, c.height);
-  g.setTransform(s, 0, 0, s, ox, oy); PIC_DRAW[nm](g); g.setTransform(1, 0, 0, 1, 0, 0);
+// 絵は、1枚の正方形（400px）に、枠いっぱいに描く。ピースは、それを格子で切ったもの
+function drawPic(nm){
+  const c = document.createElement('canvas'); c.width = c.height = 400;
+  const g = c.getContext('2d'), s = 4;
+  g.fillStyle = PIC_BG[nm]; g.fillRect(0, 0, 400, 400);
+  g.setTransform(s, 0, 0, s, 0, 0); PIC_DRAW[nm](g); g.setTransform(1, 0, 0, 1, 0, 0);
   return c;
 }
-function picGrid(n, land){
-  if (n === 2) return land ? [2, 1] : [1, 2];
-  if (n === 6) return land ? [3, 2] : [2, 3];
-  return [2, 2];
-}
+// ピースは少なく（2か4）。1つ1つが大きく、細部から全体が分かるようにする
+function picGrid(n){ return n === 2 ? [2, 1] : [2, 2]; }
 
 // ---- 並べ方 ----
 function layout(){
@@ -535,15 +532,17 @@ function newShapeRound(n, tg){
   PCS = pk.map((k, i) => ({ kind: k, s: P, st: 'home', x: 0, y: 0, hx: tg.ox + (i % tg.c + 0.5) * tg.cs + jit(i * 7 + rounds) * tg.cs * 0.06, hy: tg.oy + (Math.floor(i / tg.c) + 0.5) * tg.cs + jit(i * 5 + rounds) * tg.cs * 0.05, lift: 0, sink: 0, bob: null, anim: null, hole: null }));
 }
 function newPicRound(n, tg){
-  const land = LY.land, [cols, rows] = picGrid(n, land), b = LY.board;
-  const cs = Math.min(b.w / cols, b.h / rows), ox = b.x + (b.w - cols * cs) / 2, oy = b.y + (b.h - rows * cs) / 2;
-  const P = Math.min(cs * 0.96, tg.cs * 0.8);
+  n = n === 2 ? 2 : 4;
+  const [cols, rows] = picGrid(n), b = LY.board;
+  const side = Math.min(b.w, b.h) * 0.96, cw = side / cols, ch = side / rows;
+  const ox = b.x + (b.w - side) / 2, oy = b.y + (b.h - side) / 2;
+  const f = Math.min(1, tg.cs * 0.85 / Math.max(cw, ch));
   let nm; do { nm = PIC_NAMES[Math.floor(Math.random() * PIC_NAMES.length)]; } while (nm === lastPic); lastPic = nm;
-  PICIMG = drawPic(nm, cols, rows);
+  PICIMG = drawPic(nm);
   const idx = []; for (let i = 0; i < n; i++) idx.push(i);
-  HOLES = idx.map(i => ({ kind: 'p' + i, pic: true, col: '#f2c14e', x: ox + ((i % cols) + 0.5) * cs, y: oy + (Math.floor(i / cols) + 0.5) * cs, s: cs, piece: null }));
+  HOLES = idx.map(i => ({ kind: 'p' + i, pic: true, col: '#f2c14e', x: ox + ((i % cols) + 0.5) * cw, y: oy + (Math.floor(i / cols) + 0.5) * ch, s: Math.max(cw, ch), w: cw, h: ch, piece: null }));
   const pk = shuffle(idx.slice());
-  PCS = pk.map((i, j) => ({ kind: 'p' + i, pic: true, src: { sx: (i % cols) * 200, sy: Math.floor(i / cols) * 200, sw: 200, sh: 200 }, s: P, st: 'home', x: 0, y: 0, hx: tg.ox + ((j % tg.c) + 0.5) * tg.cs, hy: tg.oy + (Math.floor(j / tg.c) + 0.5) * tg.cs, lift: 0, sink: 0, bob: null, anim: null, hole: null }));
+  PCS = pk.map((i, j) => ({ kind: 'p' + i, pic: true, src: { sx: (i % cols) * 400 / cols, sy: Math.floor(i / cols) * 400 / rows, sw: 400 / cols, sh: 400 / rows }, w: cw * f, h: ch * f, s: Math.max(cw, ch) * f, st: 'home', x: 0, y: 0, hx: tg.ox + ((j % tg.c) + 0.5) * tg.cs, hy: tg.oy + (Math.floor(j / tg.c) + 0.5) * tg.cs, lift: 0, sink: 0, bob: null, anim: null, hole: null }));
 }
 function resetScenes(){ stars.length = 0; newRound(); }
 const inBoard = p => { const b = LY.board, m = U * 0.03; return p.x > b.x - m && p.x < b.x + b.w + m && p.y > b.y - m && p.y < b.y + b.h + m; };
@@ -707,8 +706,8 @@ function drawBoardPic(){
   HOLES.forEach(h => {
     const [glow, col] = glowOf(h, dragKinds, a);
     drawGlowAt(h, glow, col);
-    const sz = h.s, x0 = h.x - sz / 2, y0 = h.y - sz / 2;
-    rrect(x0 + sz * 0.02, y0 + sz * 0.02, sz * 0.96, sz * 0.96, sz * 0.08);
+    const x0 = h.x - h.w / 2, y0 = h.y - h.h / 2, m = h.s * 0.02;
+    rrect(x0 + m, y0 + m, h.w - m * 2, h.h - m * 2, h.s * 0.06);
     ctx.fillStyle = 'rgba(120,90,50,.08)'; ctx.fill();
     ctx.setLineDash([U * 0.012, U * 0.01]); ctx.strokeStyle = 'rgba(120,90,50,.4)'; ctx.lineWidth = Math.max(1, U * 0.003); ctx.stroke(); ctx.setLineDash([]);
   });
@@ -730,13 +729,13 @@ function drawPiece(p){
   ctx.restore();
 }
 function drawPicPiece(p){
-  const L = p.lift, placed = p.st === 'placed';
-  const sz = (placed ? p.hole.s : p.s) * (1 + 0.06 * L + 0.05 * p.sink), x = p.x, y = p.y, r = sz * 0.08;
-  if (!placed){ rrect(x - sz / 2 + U * 0.004 + L * U * 0.012, y - sz / 2 + U * 0.01 + L * U * 0.026, sz, sz, r); ctx.fillStyle = 'rgba(90,64,40,' + (0.2 - 0.07 * L).toFixed(3) + ')'; ctx.fill(); }
-  ctx.save(); rrect(x - sz / 2, y - sz / 2, sz, sz, r); ctx.clip();
-  ctx.drawImage(PICIMG, p.src.sx, p.src.sy, p.src.sw, p.src.sh, x - sz / 2, y - sz / 2, sz, sz);
+  const L = p.lift, placed = p.st === 'placed', bw = placed ? p.hole.w : p.w, bh = placed ? p.hole.h : p.h;
+  const k = 1 + 0.06 * L + 0.05 * p.sink, w = bw * k, h = bh * k, x = p.x, y = p.y, r = Math.min(w, h) * 0.07;
+  if (!placed){ rrect(x - w / 2 + U * 0.004 + L * U * 0.012, y - h / 2 + U * 0.01 + L * U * 0.026, w, h, r); ctx.fillStyle = 'rgba(90,64,40,' + (0.2 - 0.07 * L).toFixed(3) + ')'; ctx.fill(); }
+  ctx.save(); rrect(x - w / 2, y - h / 2, w, h, r); ctx.clip();
+  ctx.drawImage(PICIMG, p.src.sx, p.src.sy, p.src.sw, p.src.sh, x - w / 2, y - h / 2, w, h);
   ctx.restore();
-  rrect(x - sz / 2, y - sz / 2, sz, sz, r); ctx.strokeStyle = edgeCol(); ctx.lineWidth = edgeW(); ctx.stroke();
+  rrect(x - w / 2, y - h / 2, w, h, r); ctx.strokeStyle = edgeCol(); ctx.lineWidth = edgeW() * 1.4; ctx.stroke();
 }
 function drawPieceHint(){
   if (!hint) return;
@@ -841,7 +840,7 @@ function markOpts(){
   showRows();
 }
 function applySet(k, v){
-  if (k === 'scene'){ cancelAll(); S.scene = v; if (v === 'pic' && S.n === 3) S.n = 4; newRound(); }
+  if (k === 'scene'){ cancelAll(); S.scene = v; if (v === 'pic' && S.n !== 2) S.n = 4; newRound(); }
   else if (k === 'n' || k === 'kinds'){ cancelAll(); S[k] = Number(v); newRound(); }
   else if (k === 'hint'){ S.hint = v; if (v === 'off') hint = null; }
   else if (k === 'assist') S.assist = v;
