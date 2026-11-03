@@ -102,7 +102,7 @@ button:focus-visible,input:focus-visible{outline:3px solid #e0b24a;outline-offse
 <div id="intro" role="dialog" aria-labelledby="introTitle">
   <div class="card">
     <h1 id="introTitle">はめ あそび（支援者用の説明）</h1>
-    <p>形の穴に、同じ形の部品を入れる「型はめ」の遊びです。指で部品をつまんで、板の穴まで運びます。入ると「ことん」と音が鳴り、星が出ます。違う穴には入らず、静かに元の場所へ戻ります（失敗の音や揺れは出ません）。</p>
+    <p>2つの場面があります。「型はめ」は、同じ形の部品を穴に入れる遊びです。「絵パズル」は、絵を切ったピースを、元の場所に戻す遊びです。場面は支援者メニューで選びます。指で部品をつまんで、板の穴まで運びます。入ると「ことん」と音が鳴り、星が出ます。違う穴には入らず、静かに元の場所へ戻ります（失敗の音や揺れは出ません）。</p>
     <h2>すすめ方</h2>
     <ol>
       <li>「はじめる」を押す。最初は、丸と四角が2つです。</li>
@@ -150,8 +150,15 @@ button:focus-visible,input:focus-visible{outline:3px solid #e0b24a;outline-offse
     <p class="note">押すとすぐに変わります。カメラもマイクも使いません。名前や記録は保存しません。</p>
 
     <section class="group" aria-labelledby="gScene">
-      <h2 id="gScene">型はめ</h2>
+      <h2 id="gScene">この場面</h2>
       <div class="row">
+        <h3>場面</h3>
+        <div class="opts">
+          <button class="opt" data-set="scene" data-v="shape">型はめ</button>
+          <button class="opt" data-set="scene" data-v="pic">絵パズル</button>
+        </div>
+      </div>
+      <div class="row" data-only="shape">
         <h3>部品の数</h3>
         <div class="opts four">
           <button class="opt" data-set="n" data-v="2">2つ</button>
@@ -160,7 +167,7 @@ button:focus-visible,input:focus-visible{outline:3px solid #e0b24a;outline-offse
           <button class="opt" data-set="n" data-v="6">6つ</button>
         </div>
       </div>
-      <div class="row">
+      <div class="row" data-only="shape">
         <h3>形の種類</h3>
         <div class="opts three">
           <button class="opt" data-set="kinds" data-v="2">丸と四角</button>
@@ -168,13 +175,22 @@ button:focus-visible,input:focus-visible{outline:3px solid #e0b24a;outline-offse
           <button class="opt" data-set="kinds" data-v="4">＋星</button>
         </div>
       </div>
+      <div class="row" data-only="pic">
+        <h3>ピースの数</h3>
+        <div class="opts three">
+          <button class="opt" data-set="n" data-v="2">2つ</button>
+          <button class="opt" data-set="n" data-v="4">4つ</button>
+          <button class="opt" data-set="n" data-v="6">6つ</button>
+        </div>
+        <p class="note">絵は、車・りんご・バナナ・さかな・はなの中から、順に出します。</p>
+      </div>
       <div class="row">
         <h3>ヒント</h3>
         <div class="opts">
           <button class="opt" data-set="hint" data-v="on">出す</button>
           <button class="opt" data-set="hint" data-v="off">出さない</button>
         </div>
-        <p class="note">出す＝穴が光ります（光り方は手助けで変わります）。</p>
+        <p class="note">出す＝空いている穴（絵では枠）が光ります（光り方は手助けで変わります）。</p>
       </div>
       <button id="hintNowBtn" class="opt wide" type="button">ヒントを今出す</button>
       <button id="nextBtn" class="opt wide" type="button">つぎの型にする</button>
@@ -290,7 +306,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ---- 設定（保存しない）----
-const S = { n: 2, kinds: 2, hint: 'on', assist: 'mid', firstOnly: true, look: 'mid', cel: 'soft', vol: 30, sound: true };
+const S = { scene: 'shape', n: 2, kinds: 2, hint: 'on', assist: 'mid', firstOnly: true, look: 'mid', cel: 'soft', vol: 30, sound: true };
 // 見た目の強さ：edge＝ふちの線、glow＝入れ口の光、stars＝星、bits＝紙くず、light＝明かり
 const LOOK = {
   soft:   { edge: 0.14, lw: 1,   glow: 0.18, stars: 2, bits: 4,  light: 0.45 },
@@ -409,10 +425,11 @@ function drawWash(){
 
 
 // =====================================================================
-// ---- はめ（型はめ）----
+// ---- はめ（場面：型はめ・絵パズル）----
 const PENTA = [523, 587, 659, 784, 880, 988, 1175, 1319];
 const KCOL = { circle: '#ee8d8d', square: '#8fc0e2', triangle: '#f2c14e', star: '#b79ad8' };
 const KSETS = { 2: ['circle', 'square'], 3: ['circle', 'square', 'triangle'], 4: ['circle', 'square', 'triangle', 'star'] };
+const PIC_NAMES = ['car', 'apple', 'banana', 'fish', 'flower'];
 const shade = (hex, k) => { const n = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)); return 'rgb(' + n.map(v => Math.round(clamp(v * k, 0, 255))).join(',') + ')'; };
 const sstep = x => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -425,6 +442,7 @@ const asst = () => ({
 const pieceCol = k => S.assist === 'small' ? '#e6cf9f' : KCOL[k];   // 小さい手助け：色の手がかりをなくし、形だけで選ぶ
 
 let LY = null, HOLES = [], PCS = [], phase = 'play', phT = 0, fadeA = 1, placeN = 0, idleT = 0, hint = null, rounds = 0;
+let PICIMG = null, lastPic = '';
 
 // ---- 形 ----
 function roundedPoly(pts, r){
@@ -437,6 +455,55 @@ function shapePath(kind, cx, cy, s){
   else if (kind === 'square'){ const a = s * 0.9; rrect(cx - a / 2, cy - a / 2, a, a, s * 0.14); }
   else if (kind === 'triangle') roundedPoly([{ x: cx, y: cy - s * 0.5 }, { x: cx - s * 0.56, y: cy + s * 0.42 }, { x: cx + s * 0.56, y: cy + s * 0.42 }], s * 0.12);
   else { const pts = []; for (let i = 0; i < 10; i++){ const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? s * 0.27 : s * 0.57; pts.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr + s * 0.04 }); } roundedPoly(pts, s * 0.07); }
+}
+
+// ---- 絵（すべて単純な図形で描く）----
+function gRR(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function gCirc(g, x, y, r, col){ g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = col; g.fill(); }
+const PIC_DRAW = {
+  car(g){
+    gRR(g, 8, 46, 84, 28, 8); g.fillStyle = '#e35d5d'; g.fill();
+    g.beginPath(); g.moveTo(24, 46); g.lineTo(34, 28); g.lineTo(66, 28); g.lineTo(78, 46); g.closePath(); g.fillStyle = '#d24a4a'; g.fill();
+    g.fillStyle = '#bfe6f5'; g.fillRect(37, 32, 12, 12); g.fillRect(52, 32, 12, 12);
+    gCirc(g, 27, 76, 10, '#333'); gCirc(g, 73, 76, 10, '#333'); gCirc(g, 27, 76, 4, '#ccc'); gCirc(g, 73, 76, 4, '#ccc');
+    g.fillStyle = '#f6d24a'; g.fillRect(84, 56, 6, 5);
+  },
+  apple(g){
+    gCirc(g, 36, 54, 22, '#e4473f'); gCirc(g, 64, 54, 22, '#e4473f'); gCirc(g, 50, 60, 24, '#e4473f');
+    g.strokeStyle = '#6b4a2b'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(50, 34); g.lineTo(53, 20); g.stroke();
+    g.beginPath(); g.ellipse(64, 22, 9, 5, -0.4, 0, Math.PI * 2); g.fillStyle = '#5aa36e'; g.fill();
+    gCirc(g, 38, 50, 5, 'rgba(255,255,255,.5)');
+  },
+  banana(g){
+    g.beginPath(); g.arc(50, 26, 42, 0.2 * Math.PI, 0.8 * Math.PI); g.lineWidth = 17; g.lineCap = 'round'; g.strokeStyle = '#f6d24a'; g.stroke(); g.lineCap = 'butt';
+    gCirc(g, 50 + 42 * Math.cos(0.2 * Math.PI), 26 + 42 * Math.sin(0.2 * Math.PI), 4, '#6b4a2b');
+    gCirc(g, 50 + 42 * Math.cos(0.8 * Math.PI), 26 + 42 * Math.sin(0.8 * Math.PI), 4, '#6b4a2b');
+  },
+  fish(g){
+    g.beginPath(); g.moveTo(74, 50); g.lineTo(94, 34); g.lineTo(94, 66); g.closePath(); g.fillStyle = '#3d8fc4'; g.fill();
+    g.beginPath(); g.ellipse(46, 50, 30, 20, 0, 0, Math.PI * 2); g.fillStyle = '#4fa3d9'; g.fill();
+    g.beginPath(); g.moveTo(40, 31); g.lineTo(52, 31); g.lineTo(46, 20); g.closePath(); g.fillStyle = '#3d8fc4'; g.fill();
+    gCirc(g, 30, 46, 5, '#fff'); gCirc(g, 31, 46, 2.5, '#222');
+  },
+  flower(g){
+    g.fillStyle = '#5aa36e'; g.fillRect(48, 58, 4, 36);
+    g.beginPath(); g.ellipse(60, 78, 11, 5, -0.5, 0, Math.PI * 2); g.fill();
+    for (let i = 0; i < 5; i++){ const a = -Math.PI / 2 + i * 2 * Math.PI / 5; gCirc(g, 50 + Math.cos(a) * 19, 42 + Math.sin(a) * 19, 13, '#f6a6c1'); }
+    gCirc(g, 50, 42, 12, '#f2c14e');
+  }
+};
+// 絵は、ピースの数に合わせた格子（1ピース＝200px四方）で、1枚の絵にする
+function drawPic(nm, cols, rows){
+  const c = document.createElement('canvas'); c.width = cols * 200; c.height = rows * 200;
+  const g = c.getContext('2d'), s = Math.min(c.width, c.height) / 100, ox = (c.width - 100 * s) / 2, oy = (c.height - 100 * s) / 2;
+  g.fillStyle = '#fffaf0'; g.fillRect(0, 0, c.width, c.height);
+  g.setTransform(s, 0, 0, s, ox, oy); PIC_DRAW[nm](g); g.setTransform(1, 0, 0, 1, 0, 0);
+  return c;
+}
+function picGrid(n, land){
+  if (n === 2) return land ? [2, 1] : [1, 2];
+  if (n === 6) return land ? [3, 2] : [2, 3];
+  return [2, 2];
 }
 
 // ---- 並べ方 ----
@@ -455,13 +522,28 @@ function fitGrid(r, n){
 }
 function newRound(){
   LY = layout(); phase = 'play'; phT = 0; fadeA = 1; placeN = 0; idleT = 0; hint = null; rounds++;
-  const n = S.n, bg = fitGrid(LY.board, n), tg = fitGrid(LY.tray, n);
+  const n = S.n, tg = fitGrid(LY.tray, n);
+  if (S.scene === 'pic') newPicRound(n, tg); else newShapeRound(n, tg);
+  PCS.forEach(p => { p.x = p.hx; p.y = p.hy; });
+}
+function newShapeRound(n, tg){
+  const bg = fitGrid(LY.board, n);
   const P = Math.min(bg.cs * 0.72, tg.cs * 0.78, U * 0.2), hs = P / 0.92;
   const order = shuffle([...KSETS[S.kinds]]), kinds = []; for (let i = 0; i < n; i++) kinds.push(order[i % order.length]);
   const hk = shuffle(kinds.slice()), pk = shuffle(kinds.slice());
   HOLES = hk.map((k, i) => ({ kind: k, x: bg.ox + (i % bg.c + 0.5) * bg.cs, y: bg.oy + (Math.floor(i / bg.c) + 0.5) * bg.cs, s: hs, piece: null }));
   PCS = pk.map((k, i) => ({ kind: k, s: P, st: 'home', x: 0, y: 0, hx: tg.ox + (i % tg.c + 0.5) * tg.cs + jit(i * 7 + rounds) * tg.cs * 0.06, hy: tg.oy + (Math.floor(i / tg.c) + 0.5) * tg.cs + jit(i * 5 + rounds) * tg.cs * 0.05, lift: 0, sink: 0, bob: null, anim: null, hole: null }));
-  PCS.forEach(p => { p.x = p.hx; p.y = p.hy; });
+}
+function newPicRound(n, tg){
+  const land = LY.land, [cols, rows] = picGrid(n, land), b = LY.board;
+  const cs = Math.min(b.w / cols, b.h / rows), ox = b.x + (b.w - cols * cs) / 2, oy = b.y + (b.h - rows * cs) / 2;
+  const P = Math.min(cs * 0.96, tg.cs * 0.8);
+  let nm; do { nm = PIC_NAMES[Math.floor(Math.random() * PIC_NAMES.length)]; } while (nm === lastPic); lastPic = nm;
+  PICIMG = drawPic(nm, cols, rows);
+  const idx = []; for (let i = 0; i < n; i++) idx.push(i);
+  HOLES = idx.map(i => ({ kind: 'p' + i, pic: true, col: '#f2c14e', x: ox + ((i % cols) + 0.5) * cs, y: oy + (Math.floor(i / cols) + 0.5) * cs, s: cs, piece: null }));
+  const pk = shuffle(idx.slice());
+  PCS = pk.map((i, j) => ({ kind: 'p' + i, pic: true, src: { sx: (i % cols) * 200, sy: Math.floor(i / cols) * 200, sw: 200, sh: 200 }, s: P, st: 'home', x: 0, y: 0, hx: tg.ox + ((j % tg.c) + 0.5) * tg.cs, hy: tg.oy + (Math.floor(j / tg.c) + 0.5) * tg.cs, lift: 0, sink: 0, bob: null, anim: null, hole: null }));
 }
 function resetScenes(){ stars.length = 0; newRound(); }
 const inBoard = p => { const b = LY.board, m = U * 0.03; return p.x > b.x - m && p.x < b.x + b.w + m && p.y > b.y - m && p.y < b.y + b.h + m; };
@@ -493,7 +575,7 @@ function place(p, h){
 function landed(p){
   p.st = 'placed'; p.sink = 1; placeN++; idleT = 0;
   ping(PENTA[(placeN - 1) % 8] * 0.75, 0.06, 0.45, 2.9);
-  addStars(p.hole.x, p.hole.y, p.s * 0.6, Math.max(1, Math.round(LOOK[S.look].stars / 2)));
+  addStars(p.hole.x, p.hole.y, p.hole.s * 0.6, Math.max(1, Math.round(LOOK[S.look].stars / 2)));
   if (HOLES.every(h => h.piece)){ phase = 'done'; phT = 0; cheered = false; }
 }
 let cheered = false;
@@ -581,7 +663,21 @@ function update(dt){
 
 // =====================================================================
 // ---- 描く ----
+// 穴の光り方（手助けとヒント）
+function glowOf(h, dragKinds, a){
+  let glow = 0, col = h.col || KCOL[h.kind];
+  if (!h.piece && S.hint === 'on' && a.glowAll){ glow = 0.3; if (dragKinds.has(h.kind)) glow = 0.6; }
+  if (!h.piece && hint && hint.hole === h){ glow = Math.max(glow, 0.45 + 0.3 * Math.sin(T * 2.2)); col = '#f2c14e'; }
+  return [glow, col];
+}
+function drawGlowAt(h, glow, col){
+  if (glow <= 0) return;
+  const gr = ctx.createRadialGradient(h.x, h.y, h.s * 0.3, h.x, h.y, h.s * 1.0);
+  gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalAlpha = glow; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(h.x, h.y, h.s * 1.0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+}
 function drawBoard(){
+  if (S.scene === 'pic') return drawBoardPic();
   const b = LY.board;
   rrect(b.x + U * 0.006, b.y + U * 0.014, b.w, b.h, U * 0.04); ctx.fillStyle = 'rgba(90,64,40,.16)'; ctx.fill();
   const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h); g.addColorStop(0, '#efd6a6'); g.addColorStop(1, '#dcb67c');
@@ -593,17 +689,8 @@ function drawBoard(){
   rrect(b.x, b.y, b.w, b.h, U * 0.04); ctx.strokeStyle = edgeCol(); ctx.lineWidth = edgeW(); ctx.stroke();
   const a = asst(), dragKinds = new Set(PCS.filter(p => p.st === 'drag').map(p => p.kind));
   HOLES.forEach(h => {
-    let glow = 0, col = KCOL[h.kind];
-    if (!h.piece && S.hint === 'on'){
-      if (a.glowAll) glow = 0.3;
-      if (a.glowAll && dragKinds.has(h.kind)) glow = 0.6;
-      if (hint && hint.hole === h) glow = Math.max(glow, 0.45 + 0.3 * Math.sin(T * 2.2)), col = '#f2c14e';
-    } else if (!h.piece && hint && hint.hole === h) glow = 0.45 + 0.3 * Math.sin(T * 2.2), col = '#f2c14e';
-    if (glow > 0){
-      const gr = ctx.createRadialGradient(h.x, h.y, h.s * 0.3, h.x, h.y, h.s * 1.0);
-      gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.globalAlpha = glow; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(h.x, h.y, h.s * 1.0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    }
+    const [glow, col] = glowOf(h, dragKinds, a);
+    drawGlowAt(h, glow, col);
     // 穴（くぼみ）
     ctx.save(); shapePath(h.kind, h.x, h.y, h.s); ctx.clip();
     ctx.fillStyle = '#5a4228'; ctx.fillRect(h.x - h.s, h.y - h.s, h.s * 2, h.s * 2);
@@ -612,12 +699,27 @@ function drawBoard(){
     shapePath(h.kind, h.x, h.y, h.s); ctx.strokeStyle = edgeCol(); ctx.lineWidth = edgeW(); ctx.stroke();
   });
 }
+function drawBoardPic(){
+  const b = LY.board;
+  rrect(b.x + U * 0.006, b.y + U * 0.014, b.w, b.h, U * 0.04); ctx.fillStyle = 'rgba(90,64,40,.16)'; ctx.fill();
+  rrect(b.x, b.y, b.w, b.h, U * 0.04); ctx.fillStyle = '#fbf3df'; ctx.fill(); ctx.strokeStyle = edgeCol(); ctx.lineWidth = edgeW(); ctx.stroke();
+  const a = asst(), dragKinds = new Set(PCS.filter(p => p.st === 'drag').map(p => p.kind));
+  HOLES.forEach(h => {
+    const [glow, col] = glowOf(h, dragKinds, a);
+    drawGlowAt(h, glow, col);
+    const sz = h.s, x0 = h.x - sz / 2, y0 = h.y - sz / 2;
+    rrect(x0 + sz * 0.02, y0 + sz * 0.02, sz * 0.96, sz * 0.96, sz * 0.08);
+    ctx.fillStyle = 'rgba(120,90,50,.08)'; ctx.fill();
+    ctx.setLineDash([U * 0.012, U * 0.01]); ctx.strokeStyle = 'rgba(120,90,50,.4)'; ctx.lineWidth = Math.max(1, U * 0.003); ctx.stroke(); ctx.setLineDash([]);
+  });
+}
 function drawTray(){
   const t = LY.tray;
   rrect(t.x, t.y, t.w, t.h, U * 0.04); ctx.fillStyle = 'rgba(232,214,178,.5)'; ctx.fill(); ctx.strokeStyle = edgeCol(); ctx.lineWidth = edgeW(); ctx.stroke();
   rrect(t.x + U * 0.012, t.y + U * 0.012, t.w - U * 0.024, t.h * 0.1, U * 0.03); ctx.fillStyle = 'rgba(120,90,50,.05)'; ctx.fill();
 }
 function drawPiece(p){
+  if (p.pic) return drawPicPiece(p);
   const L = p.lift, placed = p.st === 'placed', s = p.s * (1 + 0.07 * L + 0.07 * p.sink), x = p.x, y = p.y;
   if (!placed){ shapePath(p.kind, x + U * 0.004 + L * U * 0.012, y + U * 0.01 + L * U * 0.026, s); ctx.fillStyle = 'rgba(90,64,40,' + (0.2 - 0.07 * L).toFixed(3) + ')'; ctx.fill(); }
   const col = pieceCol(p.kind), g = ctx.createLinearGradient(x - s / 2, y - s / 2, x + s / 2, y + s / 2);
@@ -626,6 +728,15 @@ function drawPiece(p){
   ctx.save(); shapePath(p.kind, x, y, s); ctx.clip();
   ctx.beginPath(); ctx.ellipse(x - s * 0.16, y - s * 0.24, s * 0.26, s * 0.12, -0.5, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fill();
   ctx.restore();
+}
+function drawPicPiece(p){
+  const L = p.lift, placed = p.st === 'placed';
+  const sz = (placed ? p.hole.s : p.s) * (1 + 0.06 * L + 0.05 * p.sink), x = p.x, y = p.y, r = sz * 0.08;
+  if (!placed){ rrect(x - sz / 2 + U * 0.004 + L * U * 0.012, y - sz / 2 + U * 0.01 + L * U * 0.026, sz, sz, r); ctx.fillStyle = 'rgba(90,64,40,' + (0.2 - 0.07 * L).toFixed(3) + ')'; ctx.fill(); }
+  ctx.save(); rrect(x - sz / 2, y - sz / 2, sz, sz, r); ctx.clip();
+  ctx.drawImage(PICIMG, p.src.sx, p.src.sy, p.src.sw, p.src.sh, x - sz / 2, y - sz / 2, sz, sz);
+  ctx.restore();
+  rrect(x - sz / 2, y - sz / 2, sz, sz, r); ctx.strokeStyle = edgeCol(); ctx.lineWidth = edgeW(); ctx.stroke();
 }
 function drawPieceHint(){
   if (!hint) return;
@@ -717,18 +828,21 @@ gear.addEventListener('pointerdown', e => {
 ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => gear.addEventListener(ev, () => { clearTimeout(holdTimer); gear.classList.remove('hold'); }));
 gear.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openPanel(); } });
 
-function curOpts(){ return { n: String(S.n), kinds: String(S.kinds), hint: S.hint, assist: S.assist, touch: S.firstOnly ? 'first' : 'all', look: S.look, cel: S.cel, vol: S.sound ? String(S.vol) : '0' }; }
+function curOpts(){ return { scene: S.scene, n: String(S.n), kinds: String(S.kinds), hint: S.hint, assist: S.assist, touch: S.firstOnly ? 'first' : 'all', look: S.look, cel: S.cel, vol: S.sound ? String(S.vol) : '0' }; }
 const MORE_DEF = { touch: 'first', look: 'mid', vol: '30', cel: 'soft' };
 const MORE_LBL = { cel: { none: 'お祝い：なし', mid: 'お祝い：ふつう', big: 'お祝い：派手' }, touch: { all: '触れ方：どの指でも' }, look: { soft: '見た目：やさしい', strong: '見た目：はっきり' }, vol: { '0': '音：なし', '15': '音：小', '45': '音：大' } };
+function showRows(){ document.querySelectorAll('#panel [data-only]').forEach(el => el.classList.toggle('on', el.dataset.only.split(' ').includes(S.scene))); }
 function markOpts(){
   const cur = curOpts();
   document.querySelectorAll('#panel [data-set]').forEach(b => b.setAttribute('aria-pressed', String(cur[b.dataset.set] === b.dataset.v)));
   const ch = Object.keys(MORE_DEF).filter(k => cur[k] !== MORE_DEF[k]).map(k => (MORE_LBL[k] && MORE_LBL[k][cur[k]]) || '').filter(Boolean);
   $('moreMark').textContent = ch.length ? '変えている：' + ch.join('・') : '';
   $('undoBtn').disabled = !undoStack.length;
+  showRows();
 }
 function applySet(k, v){
-  if (k === 'n' || k === 'kinds'){ cancelAll(); S[k] = Number(v); newRound(); }
+  if (k === 'scene'){ cancelAll(); S.scene = v; if (v === 'pic' && S.n === 3) S.n = 4; newRound(); }
+  else if (k === 'n' || k === 'kinds'){ cancelAll(); S[k] = Number(v); newRound(); }
   else if (k === 'hint'){ S.hint = v; if (v === 'off') hint = null; }
   else if (k === 'assist') S.assist = v;
   else if (k === 'touch') S.firstOnly = v === 'first';
